@@ -1,0 +1,40 @@
+Running Files in Hadoop using docker Toolbox:
+
+NgramMapReduce.java program needs to be executed on the virtual machine. User has to input the N value (for eg. N=1,2,3,4 etc). We have compiled the java file
+and created the jar file in /usr/local/hadoop/NMR.jar
+
+Running the jar file and viewing output
+
+1.Running the jar 
+      
+  hadoop jar NMR.jar NgramMapReduce input output 
+  hadoop jar WH.jar WebsiteHits input output
+  hadoop jar hi.jar hits input output
+  hadoop jar we.jar web input output
+
+2.Viewing the output
+
+  bin/hdfs dfs -cat output/*
+
+1. cd myhadoop 
+
+2. cd /usr/local/hadoop
+
+3. start ssh service
+
+4. start-dfs.sh
+
+5. start-yarn.sh
+
+6. jps
+
+7. jps  / exit
+
+8. jps /exit
+
+
+to view the file 
+
+hdfs dfs -cat  input/* 
+      
+hadoop jar NMR.jar NgramMapReduce input output   

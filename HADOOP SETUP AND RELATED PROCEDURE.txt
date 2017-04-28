@@ -1,0 +1,200 @@
+HADOOP SYSTEM
+Hadoop can be started by building up a single node cluster. It is noted whether java is setup, then ssh certificates are created. Hadoop is downloaded from the mirror links and all the required configuration files are installed. The following commands are executed in chronological order for setting up the node.
+
+apt-get update
+apt-get install default-jdk
+java -version
+ssh-keygen -t rsa -P ''
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+wget http://www-us.apache.org/dist/hadoop/common/current/hadoop-2.7.3.tar.gz
+tar xfz hadoop-2.3.0.tar.gz
+mv hadoop-2.3.0 /usr/local/hadoop 
+update-alternatives --config java
+nano ~/.bashrc
+
+Open the above file and type the following
+
+#HADOOP VARIABLES START
+export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
+export HADOOP_INSTALL=/usr/local/hadoop
+export PATH=$PATH:$HADOOP_INSTALL/bin
+export PATH=$PATH:$HADOOP_INSTALL/sbin
+export HADOOP_MAPRED_HOME=$HADOOP_INSTALL
+export HADOOP_COMMON_HOME=$HADOOP_INSTALL
+export HADOOP_HDFS_HOME=$HADOOP_INSTALL
+export YARN_HOME=$HADOOP_INSTALL
+export HADOOP_COMMON_LIB_NATIVE_DIR=$HADOOP_INSTALL/lib/native
+export HADOOP_OPTS="-Djava.library.path=$HADOOP_INSTALL/lib"
+#HADOOP VARIABLES END
+
+Then, save the file and check it using the command below whether the environment variables are saved,
+
+source ~/.bashrc
+nano /usr/local/hadoop/etc/hadoop/hadoop-env.sh
+
+Open the above file and type the following,
+
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+
+nano /usr/local/hadoop/etc/hadoop/core-site.xml
+
+Open the above file and type the following,
+
+<property>
+   <name>fs.default.name</name>
+   <value>hdfs://localhost:9000</value>
+</property>
+
+nano /usr/local/hadoop/etc/hadoop/yarn-site.xml
+
+Open the above file and type the following,
+<property>
+   <name>yarn.nodemanager.aux-services</name>
+   <value>mapreduce_shuffle</value>
+</property>
+<property>
+   <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
+   <value>org.apache.hadoop.mapred.ShuffleHandler</value>
+</property>
+
+cp /usr/local/hadoop/etc/hadoop/mapred-site.xml.template /usr/local/hadoop/etc/hadoop/mapred-site.xml
+nano /usr/local/hadoop/etc/hadoop/mapred-site.xml
+
+Open the above file and type the following,
+
+<property>
+   <name>mapreduce.framework.name</name>
+   <value>yarn</value>
+</property>
+Create two directories are follows,
+mkdir -p /usr/local/hadoop_store/hdfs/namenode
+mkdir -p /usr/local/hadoop_store/hdfs/datanode
+
+nano /usr/local/hadoop/etc/hadoop/hdfs-site.xml
+
+Open the above file and type the following,
+
+<property>
+   <name>dfs.replication</name>
+   <value>1</value>
+ </property>
+ <property>
+   <name>dfs.namenode.name.dir</name>
+   <value>file:/usr/local/hadoop_store/hdfs/namenode</value>
+ </property>
+ <property>
+   <name>dfs.datanode.data.dir</name>
+   <value>file:/usr/local/hadoop_store/hdfs/datanode</value>
+ </property>
+
+Finally, follow these steps,
+
+hdfs namenode -format
+start-dfs.sh
+start-yarn.sh
+jps
+stop-yarn.sh
+stop-dfs.sh
+
+After single node cluster is done, its time to set the multi node cluster. Here its 2 nodes only, datanode & namenode
+
+generate ssh key on master
+ssh-keygen -t rsa -P ""
+
+delivery ssh key from master to every node
+ssh-copy-id -i $HOME/.ssh/id_rsa.pub root@master
+ssh-copy-id -i $HOME/.ssh/id_rsa.pub root@slave
+
+test none-password SSH login
+ssh slave
+
+Configure cluster
+cd /usr/local/Hadoop
+
+Appoint master on every node
+nano etc/hadoop/masters
+
+Appoint slaves on master node
+master and slave nodes both act as slaves
+nano etc/hadoop/slaves
+
+setup enviroments in $HOME/.bashrc
+Set Hadoop-related environment variables
+
+export HADOOP_PREFIX=/usr/local/hadoop
+export HADOOP_HOME=/usr/local/hadoop
+export HADOOP_CONF_DIR=${HADOOP_HOME}/etc/hadoop
+export HADOOP_MAPRED_HOME=${HADOOP_HOME}
+export HADOOP_COMMON_HOME=${HADOOP_HOME}
+export HADOOP_HDFS_HOME=${HADOOP_HOME}
+export YARN_HOME=${HADOOP_HOME}
+export HADOOP_LIBEXEC_DIR=${HADOOP_HOME}/libexec
+export HADOOP_COMMON_LIB_NATIVE_DIR=${HADOOP_HOME}/lib/native
+export HADOOP_OPTS="-Djava.library.path=${HADOOP_HOME}/lib"
+
+nano ~/.bashrc
+
+copy .bashrc
+
+scp -r .bashrc root@slave:/root/
+source ~/.bashrc
+
+Add Hadoop bin/ directory to PATH
+export PATH=$PATH:$HADOOP_PREFIX/bin
+	
+create directory for HDFS
+create directories for Name node and data node on master
+mkdir -p /hdfs/namenode
+mkdir -p /hdfs/datanode
+
+create directory for Datanode on slave
+ssh root@slave "mkdir -p /hdfs/datanode"
+
+configure the setting
+cd $HADOOP_PREFIX/etc/hadoop/
+
+See the example in the HadoopTutorial package
+nano core-site.xml
+nano hdfs-site.xml
+nano yarn-site.xml
+nano mapred-site.xml
+
+
+copy the setting to slave
+scp -r * root@slave:/usr/local/hadoop/etc/hadoop/
+
+Format the namenode
+hadoop namenode ?format
+
+Then start the cluster using following commands
+
+cd /usr/local/hadoop
+sbin/start-dfs.sh
+sbin/start-yarn.sh
+
+start the job history server
+$HADOOP_PREFIX/sbin/mr-jobhistory-daemon.sh --config $HADOOP_CONF_DIR start historyserver
+
+test with jps
+jps
+ssh slave
+jps
+exit
+
+test with create an directory on HDFS
+hdfs dfs -mkdir /input
+hdfs dfs -ls /
+hdfs dfs -mkdir /user
+hdfs dfs -mkdir /user/root
+hdfs dfs -put etc/hadoop/ input
+hdfs dfs -ls /user/root/input
+
+bin/hadoop jar share/hadoop/mapreduce/hadoop-mapreduce-examples-2.7.3.jar pi 2 5
+
+bin/hadoop jar share/hadoop/mapreduce/hadoop-mapreduce-examples-2.7.3.jar wordcount input/ output/
+hdfs dfs -cat output/*
+hdfs dfs -rmr output
+
+Then the docker image is build & wordcount, Ngram, Log analysis programs are ran in the linux build in top of the docker image.
+
+
